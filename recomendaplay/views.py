@@ -11,7 +11,5 @@ def login(request):
 
 def home(request):
     r = get_access_token(request.GET.get('code', ''))
-    #print(r.status_code)
-    #print(r.json()['access_token'])
     print(get_recent_musics(r.json()['access_token']).text)
     return render(request, 'home.html')
