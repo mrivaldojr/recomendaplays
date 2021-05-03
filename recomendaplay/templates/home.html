@@ -1,1 +1,9 @@
-<h1>HOME PAGE</h1>
+{% if music_list %}
+    <ul>
+    {% for music in music_list %}
+        <li><a href="/polls/{{ music.track.name }}/">{{ music.track.name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No polls are available.</p>
+{% endif %}
