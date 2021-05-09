@@ -5,6 +5,8 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 
+environ.Env.read_env()
+
 client_id = env("CLIENT_ID")
 client_secret = env("CLIENT_SECRET")
 redirect_url = "http://localhost:8000/home"
