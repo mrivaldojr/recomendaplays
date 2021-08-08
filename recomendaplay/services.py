@@ -1,7 +1,7 @@
 import requests, base64, environ
+import pandas as pd
 
 env = environ.Env(
-    # set casting, default value
     DEBUG=(bool, False)
 )
 
@@ -32,6 +32,11 @@ def get_base64_id():
     return base64_bytes.decode('ascii')
 
 def get_recent_musics(token):
-    url = 'https://api.spotify.com/v1/me/player/recently-played'
+    url = 'https://api.spotify.com/v1/me/player/recently-played?limit=50'
+    headers = {'Authorization': 'Bearer '+token}
+    return requests.get(url, headers=headers)
+
+def get_recent_musics_features(token, ids):
+    url = 'https://api.spotify.com/v1/audio-features?ids='+ids
     headers = {'Authorization': 'Bearer '+token}
     return requests.get(url, headers=headers)

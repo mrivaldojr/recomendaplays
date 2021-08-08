@@ -1,8 +1,9 @@
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
-import requests
-from .services import spotify_login_url, get_access_token, get_recent_musics
+import pandas as pd
+import requests, json
+from .services import spotify_login_url, get_access_token, get_recent_musics, get_recent_musics_features
 
 def index(request):
     return render(request, 'sign_in.html', {})
@@ -12,9 +13,18 @@ def login(request):
 
 def home(request):
     r = get_access_token(request.GET.get('code', ''))
-    #print(get_recent_musics(r.json()['access_token']).text)
     json_response = get_recent_musics(r.json()['access_token'])
-    print(get_music_list(json_response))
+    
+    ids = get_music_ids(json_response)
+    features = get_recent_musics_features(r.json()['access_token'], ids).json()
+    
+    json_str = features
+    
+    df = pd.read_json (r'json_str.json')
+    df.to_csv (r'test.csv', index = None)
+
+    save_file(features)
+
     return render(request, 'home.html', {'music_list':get_music_list(json_response)})
 
 def get_music_list(json_response):
@@ -23,3 +33,20 @@ def get_music_list(json_response):
     for i in range(len(musics['items'])):
         music_list.append(musics['items'][i])
     return music_list
+
+def save_csv(json_string):
+    a_json = json.loads(json_string)
+    df = pd.DataFrame.from_dict(a_json, orient="index")
+    return df
+
+def get_music_ids(json_response):
+    musics = json_response.json()
+    music_ids = ""
+    for i in range(len(musics['items'])):
+        music_ids= music_ids+musics['items'][i]['track']['id']+","
+    return music_ids
+
+def save_file(json_str):
+    out_file = open("json_str.json", "w")
+    json.dump(json_str, out_file, indent = 6)
+    out_file.close()
