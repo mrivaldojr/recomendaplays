@@ -20,11 +20,11 @@ def home(request):
     
     json_str = features
     
-    df = pd.read_json (r'json_str.json')
-    df.to_csv (r'test.csv', index = None)
-
-    save_file(features)
-
+    info_str = json.dumps(features)
+    info = json.loads(info_str)
+    df = pd.json_normalize(info['audio_features'])
+    
+    df.to_csv(r'recent_musics.csv', index = None)
     return render(request, 'home.html', {'music_list':get_music_list(json_response)})
 
 def get_music_list(json_response):
@@ -39,6 +39,7 @@ def save_csv(json_string):
     df = pd.DataFrame.from_dict(a_json, orient="index")
     return df
 
+# get only the ids for the recent musics to call the fetures API 
 def get_music_ids(json_response):
     musics = json_response.json()
     music_ids = ""
