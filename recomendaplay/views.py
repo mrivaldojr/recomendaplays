@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 import pandas as pd
 import requests, json
+from .ml import read_dataset
 from .services import spotify_login_url, get_access_token, get_recent_musics, get_recent_musics_features
 
 def index(request):
@@ -23,8 +24,13 @@ def home(request):
     info_str = json.dumps(features)
     info = json.loads(info_str)
     df = pd.json_normalize(info['audio_features'])
+
+    df = df[['id','instrumentalness','energy','loudness','tempo']]
     
-    df.to_csv(r'recent_musics.csv', index = None)
+    df.to_csv(r'recomendaplay/recent_musics.csv', index = None)
+
+    read_dataset()
+
     return render(request, 'home.html', {'music_list':get_music_list(json_response)})
 
 def get_music_list(json_response):
