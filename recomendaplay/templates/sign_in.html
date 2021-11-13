@@ -1,9 +1,40 @@
 {% extends "base.html" %}
 
 {% block page_content %}
-<h1>Rec Plays</h1>
 
-<form action='actionUrl' method='GET'>
-<button type='submit'> Login With Spotify</button>
-</form>
+{% load static %}
+
+<style>
+  .text-center {
+      text-align: center!important;
+      background-color: #ededed;
+  }
+</style>
+
+<style>
+  .center {
+    margin: auto;
+    width: 60%;
+    padding: 70px 0;
+  }
+</style>
+
+<style>
+  .form-signin{
+    width: 100%;
+    max-width: 330px;
+    margin-top: 50%;
+    padding: 15px;
+    margin: 0 auto;
+  }
+</style>
+
+<body class="text-center">
+  <form class="form-signin" action='actionUrl' method='GET'>
+    <img class="mb-4" src="{% static '/images/playlist.png' %}" alt="" width="72" height="72">
+    <h1 class="h3 mb-3 font-weight-normal">Recomendaplays</h1>
+    <button class="btn btn-lg btn-primary btn-block" type="submit">Login With Spotify</button>
+  </form>
+</body>
+
 {% endblock %}
