@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 import pandas as pd
 import requests, json
-from .ml import read_dataset, kmeans_distances, starndarlize_data
+from .ml import dataset_pca, read_dataset, kmeans_distances, starndarlize_data
 from .services import spotify_login_url, get_access_token, get_recent_musics, get_recent_musics_features
 
 def index(request):
@@ -31,10 +31,10 @@ def home(request):
 
     kmeans_distances(read_dataset())
 
-    print("Std -----------------------------------------------------")
-    starndarlize_data(read_dataset())
+    # print("Std -----------------------------------------------------")
+    # std_data = starndarlize_data(read_dataset())
 
-    print()
+    dataset_pca(read_dataset())
 
     return render(request, 'home.html', {'music_list':get_music_list(json_response)})
 
