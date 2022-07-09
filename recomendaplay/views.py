@@ -13,30 +13,39 @@ def login(request):
     return redirect(spotify_login_url())
 
 def home(request):
+
     r = get_access_token(request.GET.get('code', ''))
-    json_response = get_recent_musics(r.json()['access_token'])
-    
-    ids = get_music_ids(json_response)
-    features = get_recent_musics_features(r.json()['access_token'], ids).json()
-    
-    json_str = features
-    
-    info_str = json.dumps(features)
-    info = json.loads(info_str)
-    df = pd.json_normalize(info['audio_features'])
 
-    # df = df[['id','instrumentalness','energy','loudness','tempo']]
-    df = df[['instrumentalness','energy','loudness','tempo']]
-    df.to_csv(r'recent_musics.csv', index = None)
+    if r.status_code == 200:
 
-    kmeans_distances(read_dataset())
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", r.status_code)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", request.GET.get('code', ''))
 
-    # print("Std -----------------------------------------------------")
-    # std_data = starndarlize_data(read_dataset())
+        json_response = get_recent_musics(r.json()['access_token'])
+        
+        ids = get_music_ids(json_response)
+        features = get_recent_musics_features(r.json()['access_token'], ids).json()
+        
+        json_str = features
+        
+        info_str = json.dumps(features)
+        info = json.loads(info_str)
+        df = pd.json_normalize(info['audio_features'])
 
-    dataset_pca(read_dataset())
+        # df = df[['id','instrumentalness','energy','loudness','tempo']]
+        df = df[['instrumentalness','energy','loudness','tempo']]
+        df.to_csv(r'recent_musics.csv', index = None)
 
-    return render(request, 'home.html', {'music_list':get_music_list(json_response)})
+        kmeans_distances(read_dataset())
+
+        # print("Std -----------------------------------------------------")
+        # std_data = starndarlize_data(read_dataset())
+
+        dataset_pca(read_dataset())
+
+        return render(request, 'home.html', {'music_list':get_music_list(json_response)})
+    else:
+        return render(request, 'sign_in.html')
 
 def get_music_list(json_response):
     musics = json_response.json()
