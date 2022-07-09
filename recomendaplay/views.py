@@ -17,7 +17,6 @@ def home(request):
     r = get_access_token(request.GET.get('code', ''))
 
     if r.status_code == 200:
-
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", r.status_code)
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", request.GET.get('code', ''))
 
