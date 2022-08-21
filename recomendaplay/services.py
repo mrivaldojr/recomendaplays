@@ -36,6 +36,11 @@ def get_recent_musics(token):
     headers = {'Authorization': 'Bearer '+token}
     return requests.get(url, headers=headers)
 
+def get_playlist(token):
+    url = 'https://api.spotify.com/v1/playlists/37i9dQZF1DXd9rSDyQguIk'
+    headers = {'Authorization': 'Bearer '+token}
+    return requests.get(url, headers=headers)
+
 def get_recent_musics_features(token, ids):
     url = 'https://api.spotify.com/v1/audio-features?ids='+ids
     headers = {'Authorization': 'Bearer '+token}
