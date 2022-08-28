@@ -7,7 +7,7 @@ import os.path
 import requests, json
 
 def read_dataset(file_name):
-    dados = pd.read_csv("full_data_remove_duplicates.csv")
+    dados = pd.read_csv(file_name)
     return dados
 
 def kmeans_distances(dados):
@@ -18,10 +18,10 @@ def kmeans_distances(dados):
     #print("Cluster Centers")
     #print(kmeans.cluster_centers_)
 
-def kmeans_dataset(data):
+def kmeans_dataset(data, nclusters):
     #x = data.iloc[:,1:13]
     x = data.iloc[:,1:7]
-    kmeans = KMeans(n_clusters=3, init='random')
+    kmeans = KMeans(n_clusters=nclusters, init='random')
     kmeans.fit(x)
     print('KMeans Inertia')
     print(kmeans.inertia_)
@@ -34,9 +34,16 @@ def kmeans_dataset(data):
     print(kmeans.labels_[:39])
     print('label')
     print(label)
+    x['Cluster'] = label
+    print("Cluster Columns -------------------------------")
+    if nclusters == 3:
+        x.to_csv(r'musicas_usuarios_labeled.csv', index = None)
+    else:
+        x.to_csv(r'dataset_labeled.csv', index = None)
+    print(x)
     filtered_label0 = x[label == 0]
-    print(filtered_label0)
-
+    
+    #print(filtered_label0)
 
 def starndarlize_data(dataset):
     scaler = StandardScaler()

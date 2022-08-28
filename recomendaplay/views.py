@@ -17,24 +17,27 @@ def home(request):
     r = get_access_token(request.GET.get('code', ''))
 
     if r.status_code == 200:
-        # json com as músicas ouvidas recentemente
+        # # json com as músicas ouvidas recentemente
         json_response = get_recent_musics(r.json()['access_token'])
 
-        dataset_grande_df = read_dataset("full_data_remove_duplicates.csv")
-        df_grande_features = dataset_grande_df[['id','instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']]
-        ds_grande_columns_to_normalize = df_grande_features.iloc[:, 1:7]
-        ds_grande_ids = df_grande_features.iloc[:, 0:1]
+        big_dataset_df = read_dataset('big_dataset_labeled.csv')
+        print(big_dataset_df)
 
-        column_names_ = ['instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']
+        #--Código para rodar o kmeans no dataset grande
+        # dataset_grande_df = read_dataset("full_data_remove_duplicates.csv")
+        # df_grande_features = dataset_grande_df[['id','instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']]
+        # ds_grande_columns_to_normalize = df_grande_features.iloc[:, 1:7]
+        # ds_grande_ids = df_grande_features.iloc[:, 0:1]
 
-        dataset_grande_stand = standarlize_dataset(ds_grande_columns_to_normalize)
-        dataset_grande_stand_df = pd.DataFrame(dataset_grande_stand, columns = column_names_)
+        # column_names_ = ['instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']
 
-        final_stand_dataset = pd.concat([ds_grande_ids, dataset_grande_stand_df], axis='columns')
+        # dataset_grande_stand = standarlize_dataset(ds_grande_columns_to_normalize)
+        # dataset_grande_stand_df = pd.DataFrame(dataset_grande_stand, columns = column_names_)
 
-        kmeans_dataset(final_stand_dataset.iloc[:,1:7])
-        
-        print("---------------------------------------------------------------------------------------------------------------------")
+        # final_stand_dataset = pd.concat([ds_grande_ids, dataset_grande_stand_df], axis='columns')
+
+        # kmeans_dataset(final_stand_dataset.iloc[:,1:7], 80)
+        #-- Fim Código para rodar o kmeans no dataset grande (formação de clusteres feitas anteriormente para salvar tempo de execução)
 
         # recupera ids para chamar a API de features
         ids = get_music_ids(json_response)
@@ -66,7 +69,7 @@ def home(request):
 
         #print(final_stand_dataset)
 
-        kmeans_dataset(final_stand_dataset.iloc[:,1:7])
+        kmeans_dataset(final_stand_dataset.iloc[:,1:7], 3)
         
         #kmeans_dataset(final_stand_dataset.iloc[:,1:13])
 
@@ -108,12 +111,8 @@ def get_music_ids(json_response):
     for i in range(len(musics['items'])):
         #music_ids = music_ids+musics['items'][i]['track']['id']+","
         music_ids_arr.append(musics['items'][i]['track']['id'])
-    #print('id array yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy')
     music_ids_arr = list(dict.fromkeys(music_ids_arr))
     music_ids_string = ','.join(x for x in music_ids_arr)
-    #print(music_ids_string)
-    #print(music_ids_arr)
-    #print('id array yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy')
     return music_ids_string
 
 def get_music_ids_playlists(json_response):
