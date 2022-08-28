@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import TemplateView
 import pandas as pd
 import requests, json
-from .ml import dataset_pca, read_dataset, kmeans_distances, starndarlize_data
+from .ml import dataset_pca, read_dataset, kmeans_distances, standarlize_dataset, kmeans_dataset
 from .services import spotify_login_url, get_access_token, get_recent_musics, get_recent_musics_features, get_playlist
 
 def index(request):
@@ -17,74 +17,81 @@ def home(request):
     r = get_access_token(request.GET.get('code', ''))
 
     if r.status_code == 200:
+        # json com as músicas ouvidas recentemente
         json_response = get_recent_musics(r.json()['access_token'])
 
-###### Peagar dados de Plylists para gerar dataset com músicas diversas ##########################
-        json_response_playlist = get_playlist(r.json()['access_token'])
+        dataset_grande_df = read_dataset("full_data_remove_duplicates.csv")
+        df_grande_features = dataset_grande_df[['id','instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']]
+        ds_grande_columns_to_normalize = df_grande_features.iloc[:, 1:7]
+        ds_grande_ids = df_grande_features.iloc[:, 0:1]
 
-        print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-        #print(json_response_playlist.json())
-        print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+        column_names_ = ['instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']
 
-        # salvar também as informações da músicas
-        test = json_response_playlist.json()
-        json_reponse_playlist_info = json.dumps(test)
-        json_reponse_playlist_info_2 = json.loads(json_reponse_playlist_info)
-        df_playlist_info = pd.json_normalize(json_reponse_playlist_info_2['tracks']['items'])
+        dataset_grande_stand = standarlize_dataset(ds_grande_columns_to_normalize)
+        dataset_grande_stand_df = pd.DataFrame(dataset_grande_stand, columns = column_names_)
 
-        print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-        print(df_playlist_info)
-        print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+        final_stand_dataset = pd.concat([ds_grande_ids, dataset_grande_stand_df], axis='columns')
 
-        #df = df[['id','instrumentalness','energy','loudness','tempo']]
-        df_playlist_info = df_playlist_info[['track.id', 'track.name', 'track.album.name']]
-        df_playlist_info.to_csv(r'playlist_info.csv', index = None)
+        kmeans_dataset(final_stand_dataset.iloc[:,1:7])
+        
+        print("---------------------------------------------------------------------------------------------------------------------")
 
-        ids_playlist = get_music_ids_playlists(json_response_playlist)
-        #print("-----------------------------------------------------")
-        #print(ids_playlist)
-        #print("-----------------------------------------------------")
-        featuresPlaylist = get_recent_musics_features(r.json()['access_token'], ids_playlist).json()
-
-        info_str_playlist = json.dumps(featuresPlaylist)
-        info_playlist = json.loads(info_str_playlist)
-        df_playlist = pd.json_normalize(info_playlist['audio_features'])
-
-        # df = df[['id','instrumentalness','energy','loudness','tempo']]
-        df_playlist = df_playlist[['id','instrumentalness','energy','loudness','tempo', 'acousticness', 'danceability', 'liveness', 'key', 'mode', 'speechiness', 'valence', 'time_signature']]
-        df_playlist.to_csv(r'playlist.csv', index = None)
-
-###### ##############################  #################################################################
-
+        # recupera ids para chamar a API de features
         ids = get_music_ids(json_response)
         features = get_recent_musics_features(r.json()['access_token'], ids).json()
-        
         json_str = features
-        
         info_str = json.dumps(features)
         info = json.loads(info_str)
+
         df = pd.json_normalize(info['audio_features'])
 
-        # df = df[['id','instrumentalness','energy','loudness','tempo', 'acousticness', 'danceability', 'liveness', 'key', 'mode', 'speechiness']]
-        df = df[['instrumentalness','energy','loudness','tempo']]
-        df.to_csv(r'recent_musics.csv', index = None)
+        #dataframe com todas as features    
+        #df_completo = df[['id','instrumentalness','energy','loudness','tempo', 'acousticness', 'danceability', 'liveness', 'key', 'mode', 'speechiness', 'valence', 'time_signature']]
+        
+        #daframe com subset de features
+        df_completo = df[['id','instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']]
+        #ds_columns_to_normalize = df_completo.iloc[:, 1:13]
+        ds_columns_to_normalize = df_completo.iloc[:, 1:7]
+        ds_ids = df_completo.iloc[:, 0:1]
 
-        kmeans_distances(read_dataset())
+        #todas as features
+        #column_names = ['energy','danceability','acousticness','instrumentalness','key','liveness','loudness','mode','speechiness','tempo','time_signature','valence']
+
+        column_names = ['instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']
+
+        dataset_csv_stand = standarlize_dataset(ds_columns_to_normalize)
+        dataset_csv_stand_df = pd.DataFrame(dataset_csv_stand, columns = column_names)
+
+        final_stand_dataset = pd.concat([ds_ids, dataset_csv_stand_df], axis='columns')
+
+        #print(final_stand_dataset)
+
+        kmeans_dataset(final_stand_dataset.iloc[:,1:7])
+        
+        #kmeans_dataset(final_stand_dataset.iloc[:,1:13])
+
+        #df = df[['instrumentalness','energy','loudness','tempo']]
+        #df.to_csv(r'recent_musics.csv', index = None)
+
+        #kmeans_distances(read_dataset("recent_musics.csv"))
 
         # print("Std -----------------------------------------------------")
-        # std_data = starndarlize_data(read_dataset())
+        # std_data = starndarlize_data(read_dataset("recent_musics.csv"))
 
-        dataset_pca(read_dataset())
+        #dataset_pca(read_dataset("recent_musics.csv"))
+
+        #print(get_music_list(json_response))
 
         return render(request, 'home.html', {'music_list':get_music_list(json_response)})
     else:
         return render(request, 'sign_in.html')
 
 def get_music_list(json_response):
-    musics = json_response.json()
+    recent_tracks = json_response.json()['items']
+    recent_tracks = { each['track']['id'] : each for each in recent_tracks }.values()
     music_list = []
-    for i in range(len(musics['items'])):
-        music_list.append(musics['items'][i])
+    for i in range(len(recent_tracks)):
+        music_list.append(list(recent_tracks)[i])
     return music_list
 
 def save_csv(json_string):
@@ -95,10 +102,19 @@ def save_csv(json_string):
 # get only the ids for the recent musics to call the fetures API 
 def get_music_ids(json_response):
     musics = json_response.json()
-    music_ids = ""
+    music_ids_arr = []
+    #music_ids = ""
+
     for i in range(len(musics['items'])):
-        music_ids= music_ids+musics['items'][i]['track']['id']+","
-    return music_ids
+        #music_ids = music_ids+musics['items'][i]['track']['id']+","
+        music_ids_arr.append(musics['items'][i]['track']['id'])
+    #print('id array yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy')
+    music_ids_arr = list(dict.fromkeys(music_ids_arr))
+    music_ids_string = ','.join(x for x in music_ids_arr)
+    #print(music_ids_string)
+    #print(music_ids_arr)
+    #print('id array yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy')
+    return music_ids_string
 
 def get_music_ids_playlists(json_response):
     musics = json_response.json()
