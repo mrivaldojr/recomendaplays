@@ -42,7 +42,7 @@ def kmeans_dataset(data, nclusters):
         x.to_csv(r'dataset_labeled.csv', index = None)
     print(x)
     filtered_label0 = x[label == 0]
-    
+    return kmeans
     #print(filtered_label0)
 
 def starndarlize_data(dataset):

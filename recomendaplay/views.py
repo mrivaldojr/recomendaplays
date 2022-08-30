@@ -21,7 +21,7 @@ def home(request):
         json_response = get_recent_musics(r.json()['access_token'])
 
         big_dataset_df = read_dataset('big_dataset_labeled.csv')
-        print(big_dataset_df)
+        #print(big_dataset_df)
 
         #--Código para rodar o kmeans no dataset grande
         # dataset_grande_df = read_dataset("full_data_remove_duplicates.csv")
@@ -69,7 +69,9 @@ def home(request):
 
         #print(final_stand_dataset)
 
-        kmeans_dataset(final_stand_dataset.iloc[:,1:7], 3)
+        trained_kmeans = kmeans_dataset(final_stand_dataset.iloc[:,1:7], 3)
+
+        recomendation(trained_kmeans, big_dataset_df)
         
         #kmeans_dataset(final_stand_dataset.iloc[:,1:13])
 
@@ -96,6 +98,37 @@ def get_music_list(json_response):
     for i in range(len(recent_tracks)):
         music_list.append(list(recent_tracks)[i])
     return music_list
+
+def recomendation(kmeans_trained, p_dataframe):
+    lowest = 0
+    average_distance = 0
+    print("--------------------Recommendation")
+    for i in range (80):
+        print('cluster')
+        cluster_label_i = p_dataframe.query("Cluster == @i")
+        print(cluster_label_i)
+        print("labels")
+        labels = kmeans_trained.predict(cluster_label_i.iloc[:,1:6])
+        distances = kmeans_trained.transform(cluster_label_i.iloc[:,1:6])
+        print(labels)
+        quantity = len(cluster_label_i.index)
+        print('quantity')
+        print(quantity)
+        average_distance = distances.sum() / quantity
+        print('average distance')
+        print(average_distance)
+        if i == 0:
+            lowest = distances.sum()
+            cluster = i
+        if(average_distance < lowest):
+            lowest = average_distance
+            cluster = i
+        return cluster
+
+    print('Menor Cluster')
+    print(cluster)
+    print('menor distancia')
+    print(lowest)
 
 def save_csv(json_string):
     a_json = json.loads(json_string)
