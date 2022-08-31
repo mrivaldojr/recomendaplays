@@ -4,7 +4,7 @@ from django.views.generic import TemplateView
 import pandas as pd
 import requests, json
 from .ml import dataset_pca, read_dataset, kmeans_distances, standarlize_dataset, kmeans_dataset
-from .services import spotify_login_url, get_access_token, get_recent_musics, get_recent_musics_features, get_playlist
+from .services import spotify_login_url, get_access_token, get_recent_musics, get_recent_musics_features, get_user, create_playlist, add_items_playlist
 
 def index(request):
     return render(request, 'sign_in.html', {})
@@ -17,28 +17,22 @@ def home(request):
     r = get_access_token(request.GET.get('code', ''))
 
     if r.status_code == 200:
-        # # json com as músicas ouvidas recentemente
+        # json com as músicas ouvidas recentemente
         json_response = get_recent_musics(r.json()['access_token'])
+        user = features = get_user(r.json()['access_token']).json()
+        print('User----------------------------')
+        print(user['id'])
 
+        print('Create Playlist--------------------')
+        playlist_json = create_playlist(user['id'],r.json()['access_token'], 'Created via recsys').json()
+        print(playlist_json)
+        print(playlist_json['id'])
+
+        #print(add_items_playlist(r.json()['access_token'], '30TtxTGS2d4CSovY2DhIoA', '\"spotify:track:2FPhwJ4XMald6q18tGjEY5\", \"spotify:track:4m1mqQuy34Nzh0480VR364\"').json())
+
+        # read big dataset previously clustered
         big_dataset_df = read_dataset('big_dataset_labeled.csv')
-        #print(big_dataset_df)
-
-        #--Código para rodar o kmeans no dataset grande
-        # dataset_grande_df = read_dataset("full_data_remove_duplicates.csv")
-        # df_grande_features = dataset_grande_df[['id','instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']]
-        # ds_grande_columns_to_normalize = df_grande_features.iloc[:, 1:7]
-        # ds_grande_ids = df_grande_features.iloc[:, 0:1]
-
-        # column_names_ = ['instrumentalness','energy','loudness', 'danceability', 'liveness', 'speechiness']
-
-        # dataset_grande_stand = standarlize_dataset(ds_grande_columns_to_normalize)
-        # dataset_grande_stand_df = pd.DataFrame(dataset_grande_stand, columns = column_names_)
-
-        # final_stand_dataset = pd.concat([ds_grande_ids, dataset_grande_stand_df], axis='columns')
-
-        # kmeans_dataset(final_stand_dataset.iloc[:,1:7], 80)
-        #-- Fim Código para rodar o kmeans no dataset grande (formação de clusteres feitas anteriormente para salvar tempo de execução)
-
+        
         # recupera ids para chamar a API de features
         ids = get_music_ids(json_response)
         features = get_recent_musics_features(r.json()['access_token'], ids).json()
@@ -71,21 +65,17 @@ def home(request):
 
         trained_kmeans = kmeans_dataset(final_stand_dataset.iloc[:,1:7], 3)
 
-        recomendation(trained_kmeans, big_dataset_df)
-        
-        #kmeans_dataset(final_stand_dataset.iloc[:,1:13])
+        chosen_cluster = recomendation(trained_kmeans, big_dataset_df)
 
-        #df = df[['instrumentalness','energy','loudness','tempo']]
-        #df.to_csv(r'recent_musics.csv', index = None)
+        playlist_df =  big_dataset_df.query("Cluster == @chosen_cluster")
+        playlist_df['id'] = '\"spotify:track:' + big_dataset_df['id'].astype(str) +'\"'
+        print('Recomendação Aqui=======================================')
+        print(playlist_df)
+        rec_id_list = playlist_df['id'].tolist()
+        rec = list_to_string(rec_id_list)
 
-        #kmeans_distances(read_dataset("recent_musics.csv"))
+        print(add_items_playlist(r.json()['access_token'], playlist_json['id'], rec).json())
 
-        # print("Std -----------------------------------------------------")
-        # std_data = starndarlize_data(read_dataset("recent_musics.csv"))
-
-        #dataset_pca(read_dataset("recent_musics.csv"))
-
-        #print(get_music_list(json_response))
 
         return render(request, 'home.html', {'music_list':get_music_list(json_response)})
     else:
@@ -98,6 +88,11 @@ def get_music_list(json_response):
     for i in range(len(recent_tracks)):
         music_list.append(list(recent_tracks)[i])
     return music_list
+
+def list_to_string(items):
+    string_result = ''
+    string_result = ','.join(x for x in items)
+    return string_result
 
 def recomendation(kmeans_trained, p_dataframe):
     lowest = 0
@@ -123,12 +118,11 @@ def recomendation(kmeans_trained, p_dataframe):
         if(average_distance < lowest):
             lowest = average_distance
             cluster = i
-        return cluster
-
     print('Menor Cluster')
     print(cluster)
     print('menor distancia')
     print(lowest)
+    return cluster
 
 def save_csv(json_string):
     a_json = json.loads(json_string)

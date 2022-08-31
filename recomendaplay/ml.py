@@ -19,7 +19,6 @@ def kmeans_distances(dados):
     #print(kmeans.cluster_centers_)
 
 def kmeans_dataset(data, nclusters):
-    #x = data.iloc[:,1:13]
     x = data.iloc[:,1:7]
     kmeans = KMeans(n_clusters=nclusters, init='random')
     kmeans.fit(x)
@@ -31,8 +30,6 @@ def kmeans_dataset(data, nclusters):
     print(kmeans.n_iter_)
     print("Labels")
     label = kmeans.fit_predict(x)
-    print(kmeans.labels_[:39])
-    print('label')
     print(label)
     x['Cluster'] = label
     print("Cluster Columns -------------------------------")
@@ -40,10 +37,8 @@ def kmeans_dataset(data, nclusters):
         x.to_csv(r'musicas_usuarios_labeled.csv', index = None)
     else:
         x.to_csv(r'dataset_labeled.csv', index = None)
-    print(x)
-    filtered_label0 = x[label == 0]
     return kmeans
-    #print(filtered_label0)
+
 
 def starndarlize_data(dataset):
     scaler = StandardScaler()
