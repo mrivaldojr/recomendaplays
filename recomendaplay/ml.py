@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
 import os.path
 import requests, json
@@ -13,14 +13,16 @@ def read_dataset(file_name):
 def kmeans_distances(dados):
     x = dados.iloc[:,1:5]
     #print(x)
-    kmeans = KMeans(n_clusters=3, init='random')
+    kmeans = KMeans(n_clusters=3, init='k-means++')
     kmeans.fit(x)
     #print("Cluster Centers")
     #print(kmeans.cluster_centers_)
 
 def kmeans_dataset(data, nclusters):
-    x = data.iloc[:,1:7]
-    kmeans = KMeans(n_clusters=nclusters, init='random')
+    #x = data.iloc[:,1:7]
+    ids = data.iloc[:,0:1]
+    x = data.iloc[:,1:9]
+    kmeans = KMeans(n_clusters=nclusters, init='k-means++')
     kmeans.fit(x)
     print('KMeans Inertia')
     print(kmeans.inertia_)
@@ -33,8 +35,9 @@ def kmeans_dataset(data, nclusters):
     print(label)
     x['Cluster'] = label
     print("Cluster Columns -------------------------------")
+    dataset_user = pd.concat([ids, x], axis='columns')
     if nclusters == 3:
-        x.to_csv(r'musicas_usuarios_labeled.csv', index = None)
+        dataset_user.to_csv(r'musicas_usuarios_labeled.csv', index = None)
     else:
         x.to_csv(r'dataset_labeled.csv', index = None)
     return kmeans
@@ -57,4 +60,8 @@ def dataset_pca(dataset):
 
 def standarlize_dataset(p_dataframe):
     scaler = StandardScaler()
+    return scaler.fit_transform(p_dataframe)
+
+def normalize_dataset(p_dataframe):
+    scaler = MinMaxScaler()
     return scaler.fit_transform(p_dataframe)
