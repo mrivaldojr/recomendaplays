@@ -14,7 +14,7 @@ redirect_url = "http://localhost:8000/home"
 def spotify_login_url():
     return "https://accounts.spotify.com/authorize?client_id="+client_id+\
     "&response_type=code&redirect_uri="+redirect_url+\
-    "&scope=user-read-private%20user-read-email%20user-read-recently-played%20playlist-modify-private&state=34fFs29kd09"
+    "&scope=user-read-private%20user-top-read%20user-read-email%20user-read-recently-played%20playlist-modify-private&state=34fFs29kd09"
 
 def get_access_token(code):
     url = 'https://accounts.spotify.com/api/token'
@@ -33,6 +33,11 @@ def get_base64_id():
 
 def get_recent_musics(token):
     url = 'https://api.spotify.com/v1/me/player/recently-played?limit=50'
+    headers = {'Authorization': 'Bearer '+token}
+    return requests.get(url, headers=headers)
+
+def get_top(type,token):
+    url = 'https://api.spotify.com/v1/me/top/'+type
     headers = {'Authorization': 'Bearer '+token}
     return requests.get(url, headers=headers)
 

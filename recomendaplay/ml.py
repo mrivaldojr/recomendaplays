@@ -20,8 +20,9 @@ def kmeans_distances(dados):
 
 def kmeans_dataset(data, nclusters):
     #x = data.iloc[:,1:7]
+    #x = data.iloc[:,1:9]
+    x = data.iloc[:,1:7]
     ids = data.iloc[:,0:1]
-    x = data.iloc[:,1:9]
     kmeans = KMeans(n_clusters=nclusters, init='k-means++')
     kmeans.fit(x)
     print('KMeans Inertia')
