@@ -20,7 +20,7 @@ def home(request):
     if r.status_code == 200:
         # json com as músicas ouvidas recentemente
         json_response = get_recent_musics(r.json()['access_token'])
-        user = features = get_user(r.json()['access_token']).json()
+        user = get_user(r.json()['access_token']).json()
         print('User----------------------------')
         print(user['id'])
 
@@ -29,8 +29,13 @@ def home(request):
         print(top_musics.json())
         print('-------')
         user_top_genres = get_artist_genre(top_musics.json()['items'])
+        #user_genres_counts = {item:user_top_genres.count(item) for item in user_top_genres}
+        user_genres_counts = pd.Series(user_top_genres).value_counts().nlargest(5)
+        top5_genres = user_genres_counts.index.values.tolist()
+        print(top5_genres)
         print('user top genres')
         print(user_top_genres)
+        print(user_genres_counts)
 
         print('----------------------------------')
         # Create a playlist on spotify account
@@ -88,11 +93,9 @@ def home(request):
         dataset_csv_stand = normalize_dataset(ds_columns_to_normalize)
         dataset_csv_stand_df = pd.DataFrame(dataset_csv_stand, columns = column_names)
         final_stand_dataset = pd.concat([ds_ids, dataset_csv_stand_df], axis='columns')
-        # print('final_stand_dataset')
-        # print(final_stand_dataset)
         trained_kmeans = kmeans_dataset(final_stand_dataset, 3)
 
-        recomendation_with_genres(trained_kmeans, big_dataset_df, user_top_genres)
+        recomendation_with_genres_distances(trained_kmeans, big_dataset_df, user_top_genres, 'D3', 3)
 
         # chosen_cluster = recomendation(trained_kmeans, big_dataset_df)
         # #chosen_ids = recomendation(trained_kmeans, big_dataset_df)
@@ -160,25 +163,20 @@ def get_artist_genre(top_artists_json):
                     genres.append('pop')
     return genres
 
-# recomendação usando dataset com generos
-# usando heurísticas foi achado o numero de 3 clusteres 
-def recomendation_with_genres(kmeans_trained, p_dataframe, genres):
+
+def recomendation_with_genres_distances(kmeans_trained, p_dataframe, genres, distance_to_sort, n_cluster):
     lowest = 0
     average_distance = 0
     distances_array = []
     print("--------------------Recommendation")
-    for i in range (3):
+    for i in range (n_cluster):
         print('======================')
         cluster_label_i = p_dataframe.query("Cluster == @i")
         print('Cluster')
         print(i)
         print('--')
         labels = kmeans_trained.predict(cluster_label_i.iloc[:,4:10])
-        # print('+++++++++++++++++++++++')
-        # print(cluster_label_i.iloc[:,3:9])
-        # print('+++++++++++++++++++++++')
         distances = kmeans_trained.transform(cluster_label_i.iloc[:,4:10])
-        #print(labels)
         quantity = len(cluster_label_i.index)
         print('Number of tracks')
         print(quantity)
@@ -207,51 +205,44 @@ def recomendation_with_genres(kmeans_trained, p_dataframe, genres):
     print(df_distances)
     print(cluster)
     df_cluster = p_dataframe.query("Cluster == @cluster").reset_index(drop=True)
-    ## df_cluster.to_csv(r'chosen_cluster_junior.csv', index = None)
     dataset_with_distances = pd.concat([df_cluster, df_distances], axis='columns')
     print(dataset_with_distances)
-    chosen_musics_df = dataset_with_distances.sort_values(by=['D2'])
+    chosen_musics_df = dataset_with_distances.sort_values(by=[distance_to_sort])
     chosen_musics_genre = chosen_musics_df.loc[chosen_musics_df['genres'].isin(genres)]
-    print(chosen_musics_genre.iloc[:25, :4])
-    #print(chosen_musics_df.iloc[:25, :4])
+    print(chosen_musics_genre.iloc[:25, 0:4])
+    return chosen_musics_genre.iloc[:25, :1]
 
-    # #print(p_dataframe.query("Cluster == @cluster").reset_index(drop=True))
-    # return chosen_musics_df.iloc[:25, :1]
-
-
-
-
-# #usando dataset de fran com 80 plalists
-# def recomendation(kmeans_trained, p_dataframe):
-#     lowest = 0
-#     average_distance = 0
-#     print("--------------------Recommendation")
-#     for i in range (80):
-#         print('---cluster')
-#         print(i)
-#         cluster_label_i = p_dataframe.query("Cluster == @i")
-#         print(cluster_label_i)
-#         print("labels")
-#         labels = kmeans_trained.predict(cluster_label_i.iloc[:,3:10])
-#         distances = kmeans_trained.transform(cluster_label_i.iloc[:,3:10])
-#         print(labels)
-#         quantity = len(cluster_label_i.index)
-#         print('quantity')
-#         print(quantity)
-#         average_distance = distances.sum() / quantity
-#         print('average distance')
-#         print(average_distance)
-#         if i == 0:
-#             lowest = distances.sum()
-#             cluster = i
-#         if(average_distance < lowest):
-#             lowest = average_distance
-#             cluster = i
-#     print('Menor Cluster')
-#     print(cluster)
-#     print('menor distancia')
-#     print(lowest)
-#     return cluster
+#usando dataset de fran com 80 plalists
+def recomendation_fran(kmeans_trained, p_dataframe):
+    lowest = 0
+    average_distance = 0
+    print("--------------------Recommendation")
+    for i in range (80):
+        print('---cluster')
+        print(i)
+        cluster_label_i = p_dataframe.query("Cluster == @i")
+        print(cluster_label_i)
+        print("labels")
+        labels = kmeans_trained.predict(cluster_label_i.iloc[:,3:10])
+        distances = kmeans_trained.transform(cluster_label_i.iloc[:,3:10])
+        print(labels)
+        quantity = len(cluster_label_i.index)
+        print('quantity')
+        print(quantity)
+        average_distance = distances.sum() / quantity
+        print('average distance')
+        print(average_distance)
+        if i == 0:
+            lowest = distances.sum()
+            cluster = i
+        if(average_distance < lowest):
+            lowest = average_distance
+            cluster = i
+    print('Menor Cluster')
+    print(cluster)
+    print('menor distancia')
+    print(lowest)
+    return cluster
 
 # #versão anterior considerando qua playlist já vem pronta a partir do kmeans
 # def recomendation(kmeans_trained, p_dataframe):
@@ -331,21 +322,6 @@ def recomendation_with_genres(kmeans_trained, p_dataframe, genres):
 #     dataset_with_distances = pd.concat([df_cluster, df_distances], axis='columns')
 #     print(dataset_with_distances)
 #     chosen_musics_df = dataset_with_distances.sort_values(by=['D2'])
-#     print(chosen_musics_df)
-#     print(chosen_musics_df.iloc[:25, :1])
-#     #print(p_dataframe.query("Cluster == @cluster").reset_index(drop=True))
-#     return chosen_musics_df.iloc[:25, :1]
-
-# versão sem clusterizar o dataset grande
-# def recomendation(kmeans_trained, p_dataframe):
-#     labels = kmeans_trained.predict(p_dataframe.iloc[:,1:9])
-#     distances = kmeans_trained.transform(p_dataframe.iloc[:,1:9])
-#     df_distances = pd.DataFrame(distances, columns = ['D1','D2','D3'])
-#     df_distances['Total'] = df_distances['D1'] + df_distances['D2'] + df_distances['D3']
-#     print('distances Dataframe')
-#     dataset_with_distances = pd.concat([p_dataframe, df_distances], axis='columns')
-#     print(dataset_with_distances)
-#     chosen_musics_df = dataset_with_distances.sort_values(by=['Total'])
 #     print(chosen_musics_df)
 #     print(chosen_musics_df.iloc[:25, :1])
 #     #print(p_dataframe.query("Cluster == @cluster").reset_index(drop=True))
