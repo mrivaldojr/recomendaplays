@@ -18,11 +18,9 @@ def kmeans_distances(dados):
     #print("Cluster Centers")
     #print(kmeans.cluster_centers_)
 
-def kmeans_dataset(data, nclusters):
-    #x = data.iloc[:,1:7]
-    #x = data.iloc[:,1:9]
-    x = data.iloc[:,1:7]
-    ids = data.iloc[:,0:1]
+def kmeans_dataset(data_info, data_numeric, nclusters):
+    x = data_numeric
+    ids = data_info
     kmeans = KMeans(n_clusters=nclusters, init='k-means++')
     kmeans.fit(x)
     print('KMeans Inertia')
@@ -39,9 +37,32 @@ def kmeans_dataset(data, nclusters):
     dataset_user = pd.concat([ids, x], axis='columns')
     if nclusters == 3:
         dataset_user.to_csv(r'musicas_usuarios_labeled.csv', index = None)
-    else:
-        x.to_csv(r'dataset_labeled.csv', index = None)
     return kmeans
+
+# def kmeans_dataset(data, nclusters):
+#     #x = data.iloc[:,1:7]
+#     #x = data.iloc[:,1:9]
+#     x = data.iloc[:,1:7]
+#     ids = data.iloc[:,0:1]
+#     kmeans = KMeans(n_clusters=nclusters, init='k-means++')
+#     kmeans.fit(x)
+#     print('KMeans Inertia')
+#     print(kmeans.inertia_)
+#     print("Final locations of the centroid")
+#     print(kmeans.cluster_centers_)
+#     print("The number of iterations required to converge")
+#     print(kmeans.n_iter_)
+#     print("Labels")
+#     label = kmeans.fit_predict(x)
+#     print(label)
+#     x['Cluster'] = label
+#     print("Cluster Columns -------------------------------")
+#     dataset_user = pd.concat([ids, x], axis='columns')
+#     if nclusters == 3:
+#         dataset_user.to_csv(r'musicas_usuarios_labeled.csv', index = None)
+#     else:
+#         x.to_csv(r'dataset_labeled.csv', index = None)
+#     return kmeans
 
 
 def starndarlize_data(dataset):
