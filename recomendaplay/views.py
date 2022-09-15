@@ -49,8 +49,8 @@ def home(request):
         # #big_dataset_df = read_dataset('big_dataset_labeled_5clusters.csv')
         # #big_dataset_df = read_dataset('dataset_9features_2cluster_labeled.csv')
         # #big_dataset_df = read_dataset('dataset_9features_4cluster_labeled.csv')
-        # big_dataset_df = read_dataset('dataset_fran_labeled_80c.csv')
-        big_dataset_df = read_dataset('dataset_6features_3cluster_labeled.csv')
+        big_dataset_df_80c = read_dataset('dataset_6features_80cluster_labeled.csv')
+        big_dataset_df_6c = read_dataset('dataset_6features_3cluster_labeled.csv')
 
         # recupera ids para chamar a API de features
         ids = get_music_ids(json_response)
@@ -89,7 +89,6 @@ def home(request):
         # #ds_columns_to_normalize = df_completo.iloc[:, 1:13]
         # #column_names = ['energy','danceability','acousticness','instrumentalness','key','liveness','loudness','mode','speechiness','tempo','time_signature','valence']
         
-
         #tratamento dos dados do usuário antes de fazer o modelo de clusters
         dataset_csv_stand = normalize_dataset(ds_columns_to_normalize)
         dataset_csv_stand_df = pd.DataFrame(dataset_csv_stand, columns = column_names)
@@ -98,15 +97,30 @@ def home(request):
         # recomendation with genres
         trained_kmeans = kmeans_dataset(final_stand_dataset.iloc[:,0:1], final_stand_dataset.iloc[:,1:7], 3)
         chosen_cluster = random.choice(['D1','D2','D3'])
-        #recomendation using one cluster 
-        print('#recomendation using one cluster')       
-        recomendation_with_genres_distances(trained_kmeans, big_dataset_df, top5_genres, chosen_cluster, 3)
 
-        #recommendation using all clusters
-        print('#recommendation using all clusters')
-        recomendation_with_genres_distances(trained_kmeans, big_dataset_df, top5_genres, 'Total', 3)
+        ##################recommendation using all clusters sem genres
+        print('#recommendation using all clusters (6clusters)')
+        recomendation_no_genres_distances(trained_kmeans, big_dataset_df_6c, 'Total', 3)
 
+        ##################recomendation using one cluster sem genres
+        print('#recomendation using one cluster (6 clusters)')       
+        recomendation_no_genres_distances(trained_kmeans, big_dataset_df_6c, chosen_cluster, 3)
+        
+        ##################recomendation using one cluster using genres
+        # print('#recomendation using one cluster (6 clusters)')       
+        # recomendation_with_genres_distances(trained_kmeans, big_dataset_df_6c, top5_genres, chosen_cluster, 3)
 
+        ##################recommendation using all clusters using genres
+        # print('#recommendation using all clusters (6clusters)')
+        # recomendation_with_genres_distances(trained_kmeans, big_dataset_df_6c, top5_genres, 'Total', 3)
+
+        #################recommendation using all clusters (80clusters)
+        # print('#recommendation using all clusters (80clusters)')
+        # recomendation_80c(trained_kmeans, big_dataset_df_80c, 'Total')
+
+        #################recommendation using one of the clusters (80clusters)
+        # print('#recommendation using all clusters (80clusters)')
+        # recomendation_80c(trained_kmeans, big_dataset_df_80c, chosen_cluster)
 
         # chosen_cluster = recomendation(trained_kmeans, big_dataset_df)
         # #chosen_ids = recomendation(trained_kmeans, big_dataset_df)
@@ -174,7 +188,6 @@ def get_artist_genre(top_artists_json):
                     genres.append('pop')
     return genres
 
-
 def recomendation_with_genres_distances(kmeans_trained, p_dataframe, genres, distance_to_sort, n_cluster):
     print('DISTANCE TO SORT')
     print(distance_to_sort)
@@ -188,19 +201,30 @@ def recomendation_with_genres_distances(kmeans_trained, p_dataframe, genres, dis
         print('Cluster')
         print(i)
         print('--')
+        # decide para quais clusters 
         labels = kmeans_trained.predict(cluster_label_i.iloc[:,4:10])
+        # retorna a matriz de distâncias para de cada item para cada um dos centroides
         distances = kmeans_trained.transform(cluster_label_i.iloc[:,4:10])
         quantity = len(cluster_label_i.index)
+        # transforma a matriz de distancias em dataframe para facilitar o cálculo
+        df_distances_ = pd.DataFrame(distances, columns = ['D1','D2','D3'])
+        df_distances_['Total'] = df_distances_['D1'] + df_distances_['D2'] + df_distances_['D3']
+        # soma todos os valores do cluster (D1, D2, D3 ou a soma dos 3) escolhido 
+        distance_sum = df_distances_[distance_to_sort].sum()
         print('Number of tracks')
         print(quantity)
-        average_distance = distances.sum() / quantity
+        print('Distance SUM')
+        print(distance_sum)
+        average_distance = distance_sum / quantity
         print('average distance')
         print(average_distance)
         if i == 0:
-            lowest = distances.sum()
+            df_distances = df_distances_
+            lowest = average_distance
             cluster = i
             distances_array = distances
         if(average_distance < lowest):
+            df_distances = df_distances_
             lowest = average_distance
             cluster = i
             distances_array = distances
@@ -212,11 +236,6 @@ def recomendation_with_genres_distances(kmeans_trained, p_dataframe, genres, dis
     print(lowest)
     print('distances array')
     print(distances_array)
-    df_distances = pd.DataFrame(distances_array, columns = ['D1','D2','D3'])
-    df_distances['Total'] = df_distances['D1'] + df_distances['D2'] + df_distances['D3']
-    print('distances Dataframe')
-    print(df_distances)
-    print(cluster)
     df_cluster = p_dataframe.query("Cluster == @cluster").reset_index(drop=True)
     dataset_with_distances = pd.concat([df_cluster, df_distances], axis='columns')
     print(dataset_with_distances)
@@ -225,64 +244,44 @@ def recomendation_with_genres_distances(kmeans_trained, p_dataframe, genres, dis
     print(chosen_musics_genre.iloc[:25, 0:4])
     return chosen_musics_genre.iloc[:25, :1]
 
-#usando dataset de fran com 80 plalists
-def recomendation_fran(kmeans_trained, p_dataframe):
-    lowest = 0
-    average_distance = 0
-    print("--------------------Recommendation")
-    for i in range (80):
-        print('---cluster')
-        print(i)
-        cluster_label_i = p_dataframe.query("Cluster == @i")
-        print(cluster_label_i)
-        print("labels")
-        labels = kmeans_trained.predict(cluster_label_i.iloc[:,3:10])
-        distances = kmeans_trained.transform(cluster_label_i.iloc[:,3:10])
-        print(labels)
-        quantity = len(cluster_label_i.index)
-        print('quantity')
-        print(quantity)
-        average_distance = distances.sum() / quantity
-        print('average distance')
-        print(average_distance)
-        if i == 0:
-            lowest = distances.sum()
-            cluster = i
-        if(average_distance < lowest):
-            lowest = average_distance
-            cluster = i
-    print('Menor Cluster')
-    print(cluster)
-    print('menor distancia')
-    print(lowest)
-    return cluster
-
 #versão usando clusteres calculados usando heuristicas para ter um numero bom 
-def recomendation_no_genres(kmeans_trained, p_dataframe):
+def recomendation_no_genres_distances(kmeans_trained, p_dataframe, distance_to_sort, n_cluster):
+    print('DISTANCE TO SORT')
+    print(distance_to_sort)
     lowest = 0
     average_distance = 0
     distances_array = []
     print("--------------------Recommendation")
-    for i in range (4):
+    for i in range (n_cluster):
         print('======================')
         cluster_label_i = p_dataframe.query("Cluster == @i")
         print('Cluster')
         print(i)
         print('--')
-        labels = kmeans_trained.predict(cluster_label_i.iloc[:,1:9])
-        distances = kmeans_trained.transform(cluster_label_i.iloc[:,1:9])
-        #print(labels)
+        # decide para quais clusters 
+        labels = kmeans_trained.predict(cluster_label_i.iloc[:,4:10])
+        # retorna a matriz de distâncias para de cada item para cada um dos centroides
+        distances = kmeans_trained.transform(cluster_label_i.iloc[:,4:10])
         quantity = len(cluster_label_i.index)
+        # transforma a matriz de distancias em dataframe para facilitar o cálculo
+        df_distances_ = pd.DataFrame(distances, columns = ['D1','D2','D3'])
+        df_distances_['Total'] = df_distances_['D1'] + df_distances_['D2'] + df_distances_['D3']
+        # soma todos os valores do cluster (D1, D2, D3 ou a soma dos 3) escolhido 
+        distance_sum = df_distances_[distance_to_sort].sum()
         print('Number of tracks')
         print(quantity)
-        average_distance = distances.sum() / quantity
+        print('Distance SUM')
+        print(distance_sum)
+        average_distance = distance_sum / quantity
         print('average distance')
         print(average_distance)
         if i == 0:
-            lowest = distances.sum()
+            df_distances = df_distances_
+            lowest = average_distance
             cluster = i
             distances_array = distances
         if(average_distance < lowest):
+            df_distances = df_distances_
             lowest = average_distance
             cluster = i
             distances_array = distances
@@ -294,52 +293,55 @@ def recomendation_no_genres(kmeans_trained, p_dataframe):
     print(lowest)
     print('distances array')
     print(distances_array)
-    df_distances = pd.DataFrame(distances_array, columns = ['D1','D2','D3'])
-    df_distances['Total'] = df_distances['D1'] + df_distances['D2'] + df_distances['D3']
-    print('distances Dataframe')
-    print(df_distances)
-    print(cluster)
     df_cluster = p_dataframe.query("Cluster == @cluster").reset_index(drop=True)
-    df_cluster.to_csv(r'chosen_cluster_junior.csv', index = None)
     dataset_with_distances = pd.concat([df_cluster, df_distances], axis='columns')
     print(dataset_with_distances)
-    chosen_musics_df = dataset_with_distances.sort_values(by=['D2'])
-    print(chosen_musics_df)
-    print(chosen_musics_df.iloc[:25, :1])
-    #print(p_dataframe.query("Cluster == @cluster").reset_index(drop=True))
+    chosen_musics_df = dataset_with_distances.sort_values(by=[distance_to_sort])
+    print(chosen_musics_df.iloc[:25, 0:4])
     return chosen_musics_df.iloc[:25, :1]
 
-# #versão anterior considerando qua playlist já vem pronta a partir do kmeans
-# def recomendation(kmeans_trained, p_dataframe):
-#     lowest = 0
-#     average_distance = 0
-#     print("--------------------Recommendation")
-#     for i in range (80):
-#         print('cluster')
-#         cluster_label_i = p_dataframe.query("Cluster == @i")
-#         print(cluster_label_i)
-#         print("labels")
-#         labels = kmeans_trained.predict(cluster_label_i.iloc[:,1:7])
-#         distances = kmeans_trained.transform(cluster_label_i.iloc[:,1:7])
-#         print(labels)
-#         quantity = len(cluster_label_i.index)
-#         print('quantity')
-#         print(quantity)
-#         average_distance = distances.sum() / quantity
-#         print('average distance')
-#         print(average_distance)
-#         if i == 0:
-#             lowest = distances.sum()
-#             cluster = i
-#         if(average_distance < lowest):
-#             lowest = average_distance
-#             cluster = i
-#     print('Menor Cluster')
-#     print(cluster)
-#     print('menor distancia')
-#     print(lowest)
-#     return cluster
-
+#versão do primeiro trabalho, considerando 80 clusters
+def recomendation_80c(kmeans_trained, p_dataframe, distance_to_sort):
+    lowest = 0
+    average_distance = 0
+    print("Recommendation")
+    for i in range (80):
+        print('cluster')
+        print(i)
+        cluster_label_i = p_dataframe.query("Cluster == @i")
+        print(cluster_label_i.iloc[:,:10])
+        print("labels")
+        labels = kmeans_trained.predict(cluster_label_i.iloc[:,4:10])
+        distances = kmeans_trained.transform(cluster_label_i.iloc[:,4:10])
+        # transforma a matriz de distancias em dataframe para facilitar o cálculo
+        df_distances_ = pd.DataFrame(distances, columns = ['D1','D2','D3'])
+        df_distances_['Total'] = df_distances_['D1'] + df_distances_['D2'] + df_distances_['D3']
+        # soma todos os valores do cluster (D1, D2, D3 ou a soma dos 3) escolhido 
+        distance_sum = df_distances_[distance_to_sort].sum()
+        print(labels)
+        quantity = len(cluster_label_i.index)
+        print('quantity')
+        print(quantity)
+        print('Sum Distances')
+        print(distance_sum)
+        average_distance = distance_sum / quantity
+        print('average distance')
+        print(average_distance)
+        if i == 0:
+            df_distances = df_distances_
+            lowest = average_distance
+            cluster = i
+            distances_array = distances
+        if(average_distance < lowest):
+            df_distances = df_distances_
+            lowest = average_distance
+            cluster = i
+            distances_array = distances
+    print('Menor Cluster')
+    print(cluster)
+    print('menor distancia')
+    print(lowest)
+    return cluster
     
 def save_csv(json_string):
     a_json = json.loads(json_string)
