@@ -35,8 +35,8 @@ def kmeans_dataset(data_info, data_numeric, nclusters):
     x['Cluster'] = label
     print("Cluster Columns -------------------------------")
     dataset_user = pd.concat([ids, x], axis='columns')
-    if nclusters == 3:
-        dataset_user.to_csv(r'musicas_usuarios_labeled.csv', index = None)
+    # if nclusters == 3:
+    #     dataset_user.to_csv(r'musicas_usuarios_labeled.csv', index = None)
     return kmeans
 
 # def kmeans_dataset(data, nclusters):

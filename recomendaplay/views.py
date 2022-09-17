@@ -39,18 +39,34 @@ def home(request):
         print(user_genres_counts)
 
         print('----------------------------------')
-        # Create a playlist on spotify account
-        # print('Create Playlist--------------------')
-        # playlist_json = create_playlist(user['id'],r.json()['access_token'], 'Created via recsys').json()
-        # print(playlist_json)
-        # print(playlist_json['id'])
+        #Create the playlists on spotify user account
+        print('Create Playlist--------------------')
+        playlist1_json = create_playlist(user['id'],r.json()['access_token'], 'Playlist 1').json()
+        print(playlist1_json)
+        print(playlist1_json['id'])
+
+        print('Create Playlist2--------------------')
+        playlist2_json = create_playlist(user['id'],r.json()['access_token'], 'Playlist 2').json()
+        print(playlist2_json)
+        print(playlist2_json['id'])
+
+        print('Create Playlist3--------------------')
+        playlist3_json = create_playlist(user['id'],r.json()['access_token'], 'Playlist 3').json()
+        print(playlist3_json)
+        print(playlist3_json['id'])
 
         # # read big dataset previously clustered
         # #big_dataset_df = read_dataset('big_dataset_labeled_5clusters.csv')
         # #big_dataset_df = read_dataset('dataset_9features_2cluster_labeled.csv')
         # #big_dataset_df = read_dataset('dataset_9features_4cluster_labeled.csv')
-        big_dataset_df_80c = read_dataset('dataset_6features_80cluster_labeled.csv')
-        big_dataset_df_6c = read_dataset('dataset_6features_3cluster_labeled.csv')
+        url_3c = "https://raw.githubusercontent.com/mrivaldojr/files/main/dataset_6features_3cluster_labeled.csv"
+        url_80c = "https://raw.githubusercontent.com/mrivaldojr/files/main/dataset_6features_80cluster_labeled.csv"
+
+        big_dataset_df_80c = read_dataset(url_80c)
+        big_dataset_df_6c = read_dataset(url_3c)
+
+        # big_dataset_df_80c = read_dataset('dataset_6features_80cluster_labeled.csv')
+        # big_dataset_df_6c = read_dataset('dataset_6features_3cluster_labeled.csv')
 
         # recupera ids para chamar a API de features
         ids = get_music_ids(json_response)
@@ -99,16 +115,16 @@ def home(request):
         chosen_cluster = random.choice(['D1','D2','D3'])
 
         ##################recommendation using all clusters sem genres
-        print('#recommendation using all clusters (6clusters)')
-        recomendation_no_genres_distances(trained_kmeans, big_dataset_df_6c, 'Total', 3)
+        # print('#recommendation using all clusters (6clusters)')
+        # recomendation_no_genres_distances(trained_kmeans, big_dataset_df_6c, 'Total', 3)
 
         ##################recomendation using one cluster sem genres
         print('#recomendation using one cluster (6 clusters)')       
-        recomendation_no_genres_distances(trained_kmeans, big_dataset_df_6c, chosen_cluster, 3)
+        recomendation_no_genres_distances_df = recomendation_no_genres_distances(trained_kmeans, big_dataset_df_6c, chosen_cluster, 3)
         
         ##################recomendation using one cluster using genres
-        # print('#recomendation using one cluster (6 clusters)')       
-        # recomendation_with_genres_distances(trained_kmeans, big_dataset_df_6c, top5_genres, chosen_cluster, 3)
+        print('#recomendation using one cluster (6 clusters)')       
+        recomendation_with_genres_distances_df = recomendation_with_genres_distances(trained_kmeans, big_dataset_df_6c, top5_genres, chosen_cluster, 3)
 
         ##################recommendation using all clusters using genres
         # print('#recommendation using all clusters (6clusters)')
@@ -119,8 +135,32 @@ def home(request):
         # recomendation_80c(trained_kmeans, big_dataset_df_80c, 'Total')
 
         #################recommendation using one of the clusters (80clusters)
-        # print('#recommendation using all clusters (80clusters)')
-        # recomendation_80c(trained_kmeans, big_dataset_df_80c, chosen_cluster)
+        print('#recommendation using all clusters (80clusters)')
+        recomendation_80c_df = recomendation_80c(trained_kmeans, big_dataset_df_80c, chosen_cluster)
+
+        recomendation_no_genres_distances_df['id'] = '\"spotify:track:' + recomendation_no_genres_distances_df['id'].astype(str) +'\"'
+        recomendation_with_genres_distances_df['id'] = '\"spotify:track:' + recomendation_with_genres_distances_df['id'].astype(str) +'\"'
+        recomendation_80c_df['id'] = '\"spotify:track:' + recomendation_80c_df['id'].astype(str) +'\"'
+
+        rec_id_list1 = recomendation_no_genres_distances_df['id'].tolist()
+        rec1 = list_to_string(rec_id_list1)
+
+        rec_id_list2 = recomendation_with_genres_distances_df['id'].tolist()
+        rec2 = list_to_string(rec_id_list2)
+
+        rec_id_list3 = recomendation_80c_df['id'].tolist()
+        rec3 = list_to_string(rec_id_list3)
+
+        print(rec1)
+
+        print(rec2)
+
+        print(rec3)
+
+        print(add_items_playlist(r.json()['access_token'], playlist1_json['id'], rec1).json())
+        print(add_items_playlist(r.json()['access_token'], playlist2_json['id'], rec2).json())
+        print(add_items_playlist(r.json()['access_token'], playlist3_json['id'], rec3).json())
+
 
         # chosen_cluster = recomendation(trained_kmeans, big_dataset_df)
         # #chosen_ids = recomendation(trained_kmeans, big_dataset_df)
@@ -242,7 +282,8 @@ def recomendation_with_genres_distances(kmeans_trained, p_dataframe, genres, dis
     chosen_musics_df = dataset_with_distances.sort_values(by=[distance_to_sort])
     chosen_musics_genre = chosen_musics_df.loc[chosen_musics_df['genres'].isin(genres)]
     print(chosen_musics_genre.iloc[:25, 0:4])
-    return chosen_musics_genre.iloc[:25, :1]
+    #retorna o dataframe com as top 10 músicas mais próximas 
+    return chosen_musics_genre.iloc[:10, :1]
 
 #versão usando clusteres calculados usando heuristicas para ter um numero bom 
 def recomendation_no_genres_distances(kmeans_trained, p_dataframe, distance_to_sort, n_cluster):
@@ -298,7 +339,7 @@ def recomendation_no_genres_distances(kmeans_trained, p_dataframe, distance_to_s
     print(dataset_with_distances)
     chosen_musics_df = dataset_with_distances.sort_values(by=[distance_to_sort])
     print(chosen_musics_df.iloc[:25, 0:4])
-    return chosen_musics_df.iloc[:25, :1]
+    return chosen_musics_df.iloc[:10, :1]
 
 #versão do primeiro trabalho, considerando 80 clusters
 def recomendation_80c(kmeans_trained, p_dataframe, distance_to_sort):
@@ -341,7 +382,8 @@ def recomendation_80c(kmeans_trained, p_dataframe, distance_to_sort):
     print(cluster)
     print('menor distancia')
     print(lowest)
-    return cluster
+    df_cluster = p_dataframe.query("Cluster == @cluster").reset_index(drop=True)
+    return df_cluster.iloc[:10, :1]
     
 def save_csv(json_string):
     a_json = json.loads(json_string)

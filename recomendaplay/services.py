@@ -58,7 +58,7 @@ def get_user(token):
 
 def create_playlist(user_id, token, playlist_name):
     url = 'https://api.spotify.com/v1/users/'+user_id+'/playlists'
-    payload = "{\"name\":\""+playlist_name+"\",\"description\":\"Playlist Created Via API\",\"public\":false}"
+    payload = "{\"name\":\""+playlist_name+"\",\"description\":\"Playlist Created by Recsys\",\"public\":false}"
     headers = {'Authorization': 'Bearer '+token}
     return requests.post(url, data=payload, headers=headers)
 
